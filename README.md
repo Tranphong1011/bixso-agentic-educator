@@ -107,6 +107,23 @@ Token Guard behavior:
 - Deducts 10 tokens only after successful protected response.
 - Writes usage transaction (`type=usage`, `token_delta=-10`).
 
+## Step 5: Safe SQL Tool (SELECT-only)
+
+Implemented in:
+
+- `app/agent/safe_sql_tool.py`
+- `app/agent/sql_tool.py`
+
+Behavior:
+
+- Only allows `SELECT` (including CTE `WITH ... SELECT`).
+- Blocks destructive SQL keywords (`DELETE`, `UPDATE`, `DROP`, `INSERT`, `ALTER`, `TRUNCATE`, `CREATE`, ...).
+- Blocks multi-statement SQL execution.
+- Enforces user scoping on sensitive tables:
+  - requires `user_id = :user_id` (or `users.id = :user_id`) in query.
+
+Current SQL access for wallet/transactions/enrollments is routed through this tool.
+
 ## Included tables
 
 - `users`

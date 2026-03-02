@@ -464,10 +464,10 @@ def last_transaction(request: Request, db: Session = Depends(get_db)) -> dict:
     return {
         "user_id": user_id,
         "last_transaction": {
-            "type": tx.type.value,
-            "token_delta": tx.token_delta,
-            "description": tx.description,
-            "created_at": tx.created_at.isoformat(),
+            "type": tx["type"],
+            "token_delta": tx["token_delta"],
+            "description": tx["description"],
+            "created_at": str(tx["created_at"]),
         },
     }
 
@@ -476,10 +476,7 @@ def last_transaction(request: Request, db: Session = Depends(get_db)) -> dict:
 def enrolled_courses(request: Request, db: Session = Depends(get_db)) -> dict:
     user_id = _extract_user_id(request)
     courses = get_enrolled_courses(db, user_id)
-    return {
-        "user_id": user_id,
-        "courses": [{"code": c.code, "title": c.title, "token_cost": c.token_cost} for c in courses],
-    }
+    return {"user_id": user_id, "courses": courses}
 
 
 @app.post("/api/documents/upload")

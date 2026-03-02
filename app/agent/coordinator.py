@@ -32,13 +32,13 @@ def _handle_sql_question(session: Session, user_id: str, question: str) -> dict:
         last_tx = get_last_transaction(session, user_id)
         if last_tx:
             fragments.append(
-                f"Your last transaction was type='{last_tx.type.value}' with token_delta={last_tx.token_delta}."
+                f"Your last transaction was type='{last_tx['type']}' with token_delta={last_tx['token_delta']}."
             )
             payload["last_transaction"] = {
-                "type": last_tx.type.value,
-                "token_delta": last_tx.token_delta,
-                "description": last_tx.description,
-                "created_at": last_tx.created_at.isoformat(),
+                "type": last_tx["type"],
+                "token_delta": last_tx["token_delta"],
+                "description": last_tx["description"],
+                "created_at": str(last_tx["created_at"]),
             }
         else:
             fragments.append("You do not have any transactions yet.")
@@ -46,13 +46,11 @@ def _handle_sql_question(session: Session, user_id: str, question: str) -> dict:
 
     if "course" in q or "enrolled" in q:
         courses = get_enrolled_courses(session, user_id)
-        payload["enrolled_courses"] = [
-            {"code": c.code, "title": c.title, "token_cost": c.token_cost} for c in courses
-        ]
+        payload["enrolled_courses"] = courses
         if courses:
             fragments.append(
                 "Your enrolled courses are: "
-                + ", ".join(f"{c.code} ({c.title})" for c in courses)
+                + ", ".join(f"{c['code']} ({c['title']})" for c in courses)
                 + "."
             )
         else:
