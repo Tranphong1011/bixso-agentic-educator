@@ -180,6 +180,36 @@ Behavior:
   - `token_delta = -10`
   - request path/method in description
 
+## UI structure (maintainable)
+
+- `app/web/templates/dashboard.html`
+- `app/web/static/css/dashboard.css`
+- `app/web/static/js/dashboard.js`
+
+`/` serves the HTML template and static assets are served from `/static/*`.
+
+## Deploy notes (Render)
+
+Recommended start command:
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+Practical notes before deploy:
+
+- Do not hardcode localhost ports in production.
+- `uploads/` is local filesystem; on Render it is ephemeral. Use object storage (S3/GCS) for persistence.
+- Ensure required env vars exist (`DATABASE_URL`, `OPENAI_API_KEY`, `QDRANT_*`).
+
+If local page keeps loading forever, check port conflict:
+
+```powershell
+netstat -ano | Select-String ':8000'
+Get-Process -Id <pid>
+Stop-Process -Id <pid> -Force
+```
+
 ## Included tables
 
 - `users`

@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BIXSO Agent Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css" />
+  </head>
+  <body>
+    <div class="toast-wrap" id="toastWrap"></div>
+    <div class="container">
+      <div class="hero">
+        <h1>BIXSO Agent Dashboard</h1>
+        <p>
+          All successful calls to <code>/api/agent/*</code> and <code>/api/documents/*</code> deduct 10 tokens.
+          Wallet values below come directly from PostgreSQL (<code>user_wallets.tokens_remaining</code>).
+        </p>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>User Context</h3>
+          <label for="userId">User ID (X-User-Id)</label>
+          <input id="userId" placeholder="69389f4a-0eef-415f-84f8-6b59ff1a9428" />
+          <div class="hint">Every request uses this header to identify the current user.</div>
+          <div class="wallet">
+            <span class="badge" id="walletBadge">Tokens: -</span>
+            <span class="badge warn" id="walletState">Unknown</span>
+          </div>
+          <button id="btnWallet" onclick="getWallet()">Get Wallet Balance</button>
+          <button id="btnLastTx" onclick="getLastTransaction()">Get Last Transaction</button>
+          <button id="btnCourses" onclick="getCourses()">Get Enrolled Courses</button>
+        </div>
+
+        <div class="card">
+          <h3>Upload Document</h3>
+          <label for="file">PDF/TXT File</label>
+          <input id="file" type="file" accept=".pdf,.txt" />
+          <div class="hint">This indexes chunks into Qdrant and updates <code>user_documents</code>.</div>
+          <button id="btnUpload" onclick="uploadDoc()">Upload and Index</button>
+        </div>
+
+        <div class="card card-wide">
+          <h3>Ask Coordinator Agent</h3>
+          <label for="question">Question</label>
+          <textarea id="question" placeholder="How many tokens do I have left, and what was my last transaction?"></textarea>
+          <label for="fileName">Optional file filter</label>
+          <input id="fileName" placeholder="Physics_Notes.pdf" />
+          <button id="btnAsk" onclick="askAgent()">Ask Agent</button>
+        </div>
+      </div>
+
+      <div class="card response">
+        <h3>API Response</h3>
+        <pre id="out">{ "status": "Ready" }</pre>
+      </div>
+    </div>
+
+    <script src="/static/js/dashboard.js"></script>
+  </body>
+</html>
