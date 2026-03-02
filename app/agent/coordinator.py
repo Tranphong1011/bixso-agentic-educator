@@ -73,11 +73,17 @@ def handle_user_question(
     sql_intent = _is_sql_intent(question)
 
     if rag_intent and not sql_intent:
-        rag_result = answer_from_user_documents(user_id=user_id, question=question, file_name=file_name)
+        rag_result = answer_from_user_documents(
+            session=session,
+            user_id=user_id,
+            question=question,
+            file_name=file_name,
+        )
         return {
             "intent": "rag",
             "answer": rag_result["answer"],
             "sources": rag_result["sources"],
+            "retrieved_chunks": rag_result.get("retrieved_chunks", 0),
         }
 
     if sql_intent and not rag_intent:
@@ -85,12 +91,18 @@ def handle_user_question(
 
     if sql_intent and rag_intent:
         sql_part = _handle_sql_question(session=session, user_id=user_id, question=question)
-        rag_part = answer_from_user_documents(user_id=user_id, question=question, file_name=file_name)
+        rag_part = answer_from_user_documents(
+            session=session,
+            user_id=user_id,
+            question=question,
+            file_name=file_name,
+        )
         return {
             "intent": "hybrid",
             "answer": f"{sql_part['answer']}\n\nFrom your documents: {rag_part['answer']}",
             "sql": sql_part,
             "sources": rag_part["sources"],
+            "retrieved_chunks": rag_part.get("retrieved_chunks", 0),
         }
 
     return {

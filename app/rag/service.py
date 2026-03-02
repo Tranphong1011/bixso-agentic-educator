@@ -35,6 +35,17 @@ def get_user_by_id(session: Session, user_id: str) -> User | None:
     return session.scalar(select(User).where(User.id == UUID(user_id)))
 
 
+def user_owns_document(session: Session, user_id: str, file_name: str) -> bool:
+    user_uuid = UUID(user_id)
+    doc = session.scalar(
+        select(UserDocument).where(
+            UserDocument.user_id == user_uuid,
+            UserDocument.file_name == file_name,
+        )
+    )
+    return doc is not None
+
+
 def _upsert_user_document_metadata(
     session: Session,
     user_id: UUID,
@@ -133,6 +144,9 @@ def search_user_documents(
     top_k: int = 5,
     file_name: str | None = None,
 ) -> list[dict]:
+    # Validate identifier format early to avoid accidental cross-user calls.
+    UUID(user_id)
+    top_k = max(1, min(top_k, 15))
     query_vector = embed_query(query)
     return search_user_chunks(
         query_vector=query_vector,

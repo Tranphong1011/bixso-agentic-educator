@@ -124,6 +124,25 @@ Behavior:
 
 Current SQL access for wallet/transactions/enrollments is routed through this tool.
 
+## Step 6: RAG Tool
+
+Implemented in:
+
+- `app/agent/rag_tool.py` (`RAGTool`)
+- `app/rag/service.py`
+- `app/rag/vector_store.py`
+
+RAG flow:
+
+1. Receive user question and optional `file_name`.
+2. Validate `user_id` and (if provided) verify the file belongs to that user in `user_documents`.
+3. Query Qdrant with a strict filter: `payload.user_id == <request_user_id>`.
+4. Retrieve nearest chunks, build context prompt, and call LLM (`gpt-4o-mini`) to generate answer.
+
+Security note:
+
+- The tool never queries cross-user documents because both metadata ownership check and Qdrant `user_id` filter are enforced.
+
 ## Included tables
 
 - `users`
