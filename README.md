@@ -163,6 +163,23 @@ Routing rules:
 - Uploaded document/PDF/notes questions -> RAG Tool.
 - Mixed questions -> Hybrid route.
 
+## Step 8: Token Guard + Usage Business Logic
+
+Implemented in:
+
+- `app/main.py` (`token_guard_middleware`)
+
+Behavior:
+
+- Middleware checks wallet before protected calls (`/api/agent/*`, `/api/documents/*`).
+- Requires at least 10 tokens before processing.
+- Deducts tokens only when response is successful (`status < 400`).
+- Deduction and usage logging are atomic (single DB transaction + wallet row lock).
+- Every deduction creates a `transactions` record with:
+  - `type = usage`
+  - `token_delta = -10`
+  - request path/method in description
+
 ## Included tables
 
 - `users`

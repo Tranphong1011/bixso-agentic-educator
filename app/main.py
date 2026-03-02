@@ -10,6 +10,7 @@ from fastapi import UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -32,7 +33,7 @@ app = FastAPI(title="BIXSO Agentic Educator API", version="0.1.0")
 
 
 class AskRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1)
     file_name: str | None = None
 
 
@@ -45,6 +46,32 @@ def _extract_user_id(request: Request) -> str:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="X-User-Id must be a valid UUID.") from exc
     return user_id
+
+
+def _deduct_tokens_and_log_usage(user_uuid: UUID, path: str, method: str) -> bool:
+    """
+    Deduct token and append usage transaction in a single DB transaction.
+    Returns True when deduction succeeds, False when wallet is missing/insufficient.
+    """
+    with SessionLocal() as db:
+        wallet = db.scalar(
+            select(UserWallet).where(UserWallet.user_id == user_uuid).with_for_update()
+        )
+        if not wallet or wallet.tokens_remaining < TOKEN_COST_PER_SUCCESS:
+            db.rollback()
+            return False
+
+        wallet.tokens_remaining -= TOKEN_COST_PER_SUCCESS
+        db.add(
+            Transaction(
+                user_id=user_uuid,
+                type=TransactionType.USAGE,
+                token_delta=-TOKEN_COST_PER_SUCCESS,
+                description=f"Token guard deduction for {method} {path}",
+            )
+        )
+        db.commit()
+    return True
 
 
 @app.middleware("http")
@@ -76,19 +103,11 @@ async def token_guard_middleware(request: Request, call_next):
 
     # Deduct only when response is successful.
     if response.status_code < 400:
-        with SessionLocal() as db:
-            wallet = db.scalar(select(UserWallet).where(UserWallet.user_id == user_uuid))
-            if wallet:
-                wallet.tokens_remaining -= TOKEN_COST_PER_SUCCESS
-                db.add(
-                    Transaction(
-                        user_id=user_uuid,
-                        type=TransactionType.USAGE,
-                        token_delta=-TOKEN_COST_PER_SUCCESS,
-                        description=f"Token guard deduction for {request.url.path}",
-                    )
-                )
-                db.commit()
+        _deduct_tokens_and_log_usage(
+            user_uuid=user_uuid,
+            path=request.url.path,
+            method=request.method,
+        )
 
     return response
 
