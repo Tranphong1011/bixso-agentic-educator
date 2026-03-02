@@ -17,18 +17,7 @@ pip install -r requirements.txt
 ```
 
 2. Create your environment file:
-
-```bash
-cp .env.example .env
-```
-
-3. Update `.env`:
-
-```env
-DATABASE_URL=postgresql+psycopg2://postgres:########@localhost:5432/bixso_db
-OPENAI_API_KEY=###############3
-EMBEDDING_MODEL=text-embedding-3-small
-QDRANT_URL=http://localhost:6333
+.europe-west3-0.gcp.cloud.qdrant.io
 QDRANT_API_KEY=
 QDRANT_COLLECTION=education-collection
 CHUNK_SIZE=800
@@ -83,6 +72,40 @@ What this does:
 - Generates embeddings with OpenAI (`EMBEDDING_MODEL`).
 - Upserts vectors to Qdrant collection (`QDRANT_COLLECTION`).
 - Stores/updates document metadata in PostgreSQL table `user_documents`.
+
+## Step 4: FastAPI API + Token Guard
+
+Run the API:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Open UI playground:
+
+- `http://127.0.0.1:8000/`
+
+Use header for protected endpoints:
+
+- `X-User-Id: <user_uuid>`
+
+Protected endpoints (Token Guard applies, costs 10 tokens on success):
+
+- `POST /api/documents/upload`
+- `POST /api/agent/ask`
+
+Utility endpoints:
+
+- `GET /api/health`
+- `GET /api/wallet`
+- `GET /api/transactions/last`
+- `GET /api/courses/enrolled`
+
+Token Guard behavior:
+
+- Rejects request if user has fewer than 10 tokens.
+- Deducts 10 tokens only after successful protected response.
+- Writes usage transaction (`type=usage`, `token_delta=-10`).
 
 ## Included tables
 
