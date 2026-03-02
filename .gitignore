@@ -1,2 +1,4 @@
 bixsoenv
 .env
+__pycache__/
+*.pyc

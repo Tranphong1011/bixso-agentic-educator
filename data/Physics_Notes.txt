@@ -1,0 +1,4 @@
+Second Law of Thermodynamics:
+In any natural thermodynamic process, the total entropy of an isolated system tends to increase over time.
+This means heat does not spontaneously flow from a colder body to a hotter body without external work.
+Practical implication: no heat engine can convert all absorbed heat into useful work.

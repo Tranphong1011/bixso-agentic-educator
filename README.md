@@ -1,6 +1,6 @@
 # BIXSO Agentic Educator
 
-Step 2 implementation for the BIXSO technical challenge using SQLAlchemy ORM and PostgreSQL.
+Step 2-3 implementation for the BIXSO technical challenge using SQLAlchemy ORM, PostgreSQL, OpenAI embeddings, and Qdrant.
 
 ## Prerequisites
 
@@ -22,10 +22,17 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-3. Update `DATABASE_URL` in `.env`:
+3. Update `.env`:
 
 ```env
 DATABASE_URL=postgresql+psycopg2://postgres:########@localhost:5432/bixso_db
+OPENAI_API_KEY=###############3
+EMBEDDING_MODEL=text-embedding-3-small
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+QDRANT_COLLECTION=education-collection
+CHUNK_SIZE=800
+CHUNK_OVERLAP=120
 ```
 
 ## Initialize DB schema
@@ -43,6 +50,39 @@ python -m app.db.init_db --seed
 ```
 
 This script is idempotent for sample users/courses/documents/transactions and can be run multiple times.
+
+## Step 3: Vector store (Qdrant) + document indexing
+
+Supported file types:
+
+- `.pdf`
+- `.txt`
+
+Index a document for a user by email:
+
+```bash
+python -m app.rag.index_document --user-email learner.a@example.com --file-path ./data/Physics_Notes.pdf
+```
+
+Index a document by user UUID:
+
+```bash
+python -m app.rag.index_document --user-id <user_uuid> --file-path ./data/Physics_Notes.pdf
+```
+
+Search indexed chunks (user-scoped):
+
+```bash
+python -m app.rag.query_document --user-id <user_uuid> --query "Second Law of Thermodynamics" --top-k 5 --file-name Physics_Notes.pdf
+```
+
+What this does:
+
+- Reads PDF/TXT content.
+- Splits text into chunks (`CHUNK_SIZE`, `CHUNK_OVERLAP`).
+- Generates embeddings with OpenAI (`EMBEDDING_MODEL`).
+- Upserts vectors to Qdrant collection (`QDRANT_COLLECTION`).
+- Stores/updates document metadata in PostgreSQL table `user_documents`.
 
 ## Included tables
 
