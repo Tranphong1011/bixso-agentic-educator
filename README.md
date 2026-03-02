@@ -143,6 +143,26 @@ Security note:
 
 - The tool never queries cross-user documents because both metadata ownership check and Qdrant `user_id` filter are enforced.
 
+## Step 7: Coordinator Agent with LangGraph Router
+
+Implemented in:
+
+- `app/agent/coordinator_graph.py`
+- `app/agent/coordinator.py`
+
+Architecture:
+
+- `route` node detects intent from user question (`sql`, `rag`, `hybrid`, `unknown`).
+- `sql_tool` node executes SQL Tool flows (wallet, last transaction, enrolled courses).
+- `rag_tool` node executes RAG Tool flow.
+- `hybrid_tool` node combines SQL + RAG outputs.
+
+Routing rules:
+
+- Token/balance/transaction/course/enrollment questions -> SQL Tool.
+- Uploaded document/PDF/notes questions -> RAG Tool.
+- Mixed questions -> Hybrid route.
+
 ## Included tables
 
 - `users`

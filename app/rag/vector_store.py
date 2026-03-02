@@ -68,13 +68,24 @@ def search_user_chunks(
         conditions.append(FieldCondition(key="file_name", match=MatchValue(value=file_name)))
 
     client = build_qdrant_client()
-    results = client.search(
-        collection_name=settings.QDRANT_COLLECTION,
-        query_vector=query_vector,
-        query_filter=Filter(must=conditions),
-        limit=top_k,
-        with_payload=True,
-    )
+    if hasattr(client, "search"):
+        results = client.search(
+            collection_name=settings.QDRANT_COLLECTION,
+            query_vector=query_vector,
+            query_filter=Filter(must=conditions),
+            limit=top_k,
+            with_payload=True,
+        )
+    else:
+        # Compatibility path for newer qdrant-client APIs.
+        response = client.query_points(
+            collection_name=settings.QDRANT_COLLECTION,
+            query=query_vector,
+            query_filter=Filter(must=conditions),
+            limit=top_k,
+            with_payload=True,
+        )
+        results = response.points
     return [
         {
             "score": item.score,
