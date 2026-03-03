@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent.coordinator import handle_user_question
+from app.core.config import settings
 from app.agent.sql_tool import get_enrolled_courses
 from app.agent.sql_tool import get_last_transaction
 from app.db.models import Transaction
@@ -25,7 +26,10 @@ from app.db.models import User
 from app.db.models import UserWallet
 from app.db.session import SessionLocal
 from app.db.session import get_db
+from app.rag.service import ingest_user_document_bytes
 from app.rag.service import ingest_user_document
+from app.storage.gcs_storage import GCSStorage
+from app.storage.gcs_storage import GCSStorageError
 
 
 TOKEN_COST_PER_SUCCESS = 10
@@ -184,16 +188,49 @@ def upload_document(
     if suffix not in {".pdf", ".txt"}:
         raise HTTPException(status_code=400, detail="Only PDF/TXT files are supported.")
 
-    upload_root = Path("uploads") / str(user.id)
-    upload_root.mkdir(parents=True, exist_ok=True)
-    target = upload_root / file.filename
     content = file.file.read()
-    target.write_bytes(content)
+    content_type = file.content_type or ("application/pdf" if suffix == ".pdf" else "text/plain")
 
-    result = ingest_user_document(session=db, user_id=str(user.id), file_path=str(target))
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    storage_path: str
+    if settings.GCP_BUCKET_NAME:
+        try:
+            storage = GCSStorage()
+            storage_path = storage.upload_bytes(
+                data=content,
+                user_id=str(user.id),
+                file_name=file.filename,
+                content_type=content_type,
+            )
+            result = ingest_user_document_bytes(
+                session=db,
+                user_id=str(user.id),
+                file_name=file.filename,
+                data=content,
+                storage_path=storage_path,
+                mime_type=content_type,
+            )
+        except GCSStorageError as exc:
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
+    else:
+        # Local fallback for development environments without GCP configuration.
+        upload_root = Path("uploads") / str(user.id)
+        upload_root.mkdir(parents=True, exist_ok=True)
+        target = upload_root / file.filename
+        target.write_bytes(content)
+        storage_path = str(target.resolve())
+        result = ingest_user_document(
+            session=db,
+            user_id=str(user.id),
+            file_path=str(target),
+        )
+
     db.commit()
     return {
         "message": "Document uploaded and indexed.",
+        "storage_path": storage_path,
         "document_id": result.document_id,
         "file_name": result.file_name,
         "chunks": result.total_chunks,

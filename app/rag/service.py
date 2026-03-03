@@ -10,6 +10,7 @@ from app.db.models import User
 from app.db.models import UserDocument
 from app.rag.chunking import chunk_text
 from app.rag.document_loader import load_document_text
+from app.rag.document_loader import load_document_text_from_bytes
 from app.rag.embeddings import embed_query
 from app.rag.embeddings import embed_texts
 from app.rag.vector_store import IndexedChunk
@@ -106,6 +107,72 @@ def ingest_user_document(session: Session, user_id: str, file_path: str) -> RAGI
         storage_path=str(path.resolve()),
         mime_type=mime_type,
         file_size_bytes=path.stat().st_size,
+    )
+
+    indexed_chunks: list[IndexedChunk] = []
+    user_id_str = str(user_id)
+    document_id_str = str(document.id)
+    for idx, (chunk, vector) in enumerate(zip(chunks, vectors)):
+        payload = {
+            "user_id": user_id_str,
+            "document_id": document_id_str,
+            "file_name": file_name,
+            "chunk_index": idx,
+            "content": chunk,
+        }
+        indexed_chunks.append(
+            IndexedChunk(
+                chunk_id=build_point_id(document_id=document_id_str, chunk_index=idx),
+                content=chunk,
+                vector=vector,
+                payload=payload,
+            )
+        )
+
+    upsert_document_chunks(indexed_chunks)
+
+    return RAGIngestionResult(
+        document_id=document_id_str,
+        file_name=file_name,
+        total_chunks=len(indexed_chunks),
+        collection_name=settings.QDRANT_COLLECTION,
+    )
+
+
+def ingest_user_document_bytes(
+    session: Session,
+    user_id: str,
+    file_name: str,
+    data: bytes,
+    storage_path: str,
+    mime_type: str | None = None,
+) -> RAGIngestionResult:
+    if not settings.QDRANT_COLLECTION:
+        raise ValueError("QDRANT_COLLECTION is required.")
+
+    content, resolved_mime = load_document_text_from_bytes(
+        data=data,
+        file_name=file_name,
+        mime_type=mime_type,
+    )
+    chunks = chunk_text(
+        content=content,
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP,
+    )
+    if not chunks:
+        raise ValueError("No readable content found in document.")
+
+    vectors = embed_texts(chunks)
+    ensure_collection(vector_size=len(vectors[0]))
+
+    document = _upsert_user_document_metadata(
+        session=session,
+        user_id=UUID(user_id),
+        file_name=file_name,
+        storage_path=storage_path,
+        mime_type=resolved_mime,
+        file_size_bytes=len(data),
     )
 
     indexed_chunks: list[IndexedChunk] = []

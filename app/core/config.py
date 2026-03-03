@@ -19,6 +19,10 @@ class Settings:
     QDRANT_COLLECTION: str = "education-collection"
     CHUNK_SIZE: int = 800
     CHUNK_OVERLAP: int = 120
+    GCP_PROJECT_ID: str = ""
+    GCP_BUCKET_NAME: str = ""
+    GCP_SERVICE_ACCOUNT_KEY_PATH: str = ""
+    GCP_SERVICE_ACCOUNT_JSON: str = ""
 
 
 @lru_cache(maxsize=1)
@@ -38,6 +42,10 @@ def get_settings() -> Settings:
         QDRANT_COLLECTION=os.getenv("QDRANT_COLLECTION", "education-collection"),
         CHUNK_SIZE=int(os.getenv("CHUNK_SIZE", "800")),
         CHUNK_OVERLAP=int(os.getenv("CHUNK_OVERLAP", "120")),
+        GCP_PROJECT_ID=os.getenv("GCP_PROJECT_ID", ""),
+        GCP_BUCKET_NAME=os.getenv("GCP_BUCKET_NAME", ""),
+        GCP_SERVICE_ACCOUNT_KEY_PATH=os.getenv("GCP_SERVICE_ACCOUNT_KEY_PATH", ""),
+        GCP_SERVICE_ACCOUNT_JSON=os.getenv("GCP_SERVICE_ACCOUNT_JSON", ""),
     )
 
 

@@ -3,5 +3,7 @@ bixsoenv
 __pycache__/
 *.pyc
 uploads/
-
-
+gen-lang-client-0994268122-ce2d115cb484.json
+gen-lang-client-*.json
+*service-account*.json
+backup.dump
