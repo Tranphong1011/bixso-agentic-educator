@@ -118,6 +118,45 @@ pre {
 .toast.error { background: var(--err); }
 .toast.info { background: #336eaa; }
 
+.users-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f9fbff;
+}
+
+.user-meta {
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 700;
+}
+
+.user-id {
+  font-size: 0.82rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.user-use-btn {
+  width: auto;
+  margin-top: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 900px) {
   .container { margin: 16px auto; padding: 0 12px 20px; }
   .hero { padding: 16px; border-radius: 14px; }
@@ -155,5 +194,12 @@ pre {
     right: 10px;
     top: 10px;
     width: calc(100% - 20px);
+  }
+  .user-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .user-use-btn {
+    width: 100%;
   }
 }

@@ -35,10 +35,12 @@ from app.storage.gcs_storage import GCSStorageError
 TOKEN_COST_PER_SUCCESS = 10
 PROTECTED_PREFIXES = ("/api/agent", "/api/documents")
 BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent
 WEB_DIR = BASE_DIR / "web"
 STATIC_DIR = WEB_DIR / "static"
 TEMPLATES_DIR = WEB_DIR / "templates"
 INDEX_FILE = TEMPLATES_DIR / "dashboard.html"
+LOGO_FILE = PROJECT_ROOT / "logo.png"
 
 app = FastAPI(title="BIXSO Agentic Educator API", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -135,6 +137,13 @@ def playground():
     return FileResponse(INDEX_FILE)
 
 
+@app.get("/favicon.ico")
+def favicon():
+    if not LOGO_FILE.exists():
+        raise HTTPException(status_code=404, detail="logo.png not found at project root.")
+    return FileResponse(LOGO_FILE, media_type="image/png")
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -147,6 +156,20 @@ def wallet_info(request: Request, db: Session = Depends(get_db)) -> dict:
     if not wallet:
         raise HTTPException(status_code=404, detail="Wallet not found.")
     return {"user_id": user_id, "tokens_remaining": wallet.tokens_remaining}
+
+
+@app.get("/api/users")
+def list_users(db: Session = Depends(get_db)) -> dict:
+    rows = db.scalars(select(User).order_by(User.full_name.asc())).all()
+    return {
+        "users": [
+            {
+                "user_id": str(user.id),
+                "full_name": user.full_name,
+            }
+            for user in rows
+        ]
+    }
 
 
 @app.get("/api/transactions/last")

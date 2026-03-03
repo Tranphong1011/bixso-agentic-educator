@@ -7,6 +7,26 @@ function showToast(type, message) {
   setTimeout(() => div.remove(), 3600);
 }
 
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs || 12000);
+  try {
+    const merged = { ...(options || {}), signal: controller.signal };
+    return await fetch(url, merged);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function setOutput(data) {
   document.getElementById("out").textContent = JSON.stringify(data, null, 2);
 }
@@ -37,7 +57,7 @@ async function requestJson(url, options, buttonId, preserveOutput) {
   }
   setLoading(buttonId, true);
   try {
-    const res = await fetch(url, options);
+    const res = await fetchWithTimeout(url, options, 12000);
     const data = await res.json();
     if (!preserveOutput) setOutput(data);
     if (!res.ok) {
@@ -50,6 +70,45 @@ async function requestJson(url, options, buttonId, preserveOutput) {
   } finally {
     setLoading(buttonId, false);
   }
+}
+
+async function loadUsers() {
+  const root = document.getElementById("usersList");
+  try {
+    const res = await fetchWithTimeout("/api/users", {}, 10000);
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data.users)) {
+      root.innerHTML = '<div class="hint">Failed to load users.</div>';
+      return;
+    }
+
+    if (data.users.length === 0) {
+      root.innerHTML = '<div class="hint">No users found in database.</div>';
+      return;
+    }
+
+    root.innerHTML = data.users
+      .map(
+        (u) => `
+        <div class="user-row">
+          <div class="user-meta">
+            <div class="user-name">${escapeHtml(u.full_name)}</div>
+            <div class="user-id">${escapeHtml(u.user_id)}</div>
+          </div>
+          <button class="user-use-btn" onclick="useUserId('${escapeHtml(u.user_id)}')">Use</button>
+        </div>
+      `
+      )
+      .join("");
+  } catch (err) {
+    root.innerHTML = '<div class="hint">Failed to load users.</div>';
+    showToast("error", "Cannot load users list.");
+  }
+}
+
+function useUserId(userId) {
+  document.getElementById("userId").value = userId;
+  showToast("info", "User ID selected.");
 }
 
 function updateWalletBadge(tokens) {
@@ -75,7 +134,7 @@ async function getWallet() {
 }
 
 async function refreshWalletBadgeOnly() {
-  const res = await fetch("/api/wallet", { headers: headers(false) });
+  const res = await fetchWithTimeout("/api/wallet", { headers: headers(false) }, 10000);
   const data = await res.json();
   if (res.ok && typeof data.tokens_remaining === "number") {
     updateWalletBadge(data.tokens_remaining);
@@ -133,5 +192,7 @@ window.getLastTransaction = getLastTransaction;
 window.getCourses = getCourses;
 window.uploadDoc = uploadDoc;
 window.askAgent = askAgent;
+window.useUserId = useUserId;
 
 showToast("info", "Dashboard ready. Enter user ID to start.");
+loadUsers();
