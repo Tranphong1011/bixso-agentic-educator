@@ -29,7 +29,7 @@ function setLoading(buttonId, loading) {
   btn.textContent = loading ? "Processing..." : btn.dataset.prev;
 }
 
-async function requestJson(url, options, buttonId) {
+async function requestJson(url, options, buttonId, preserveOutput) {
   if (!currentUserId()) {
     const message = "Please provide User ID first.";
     showToast("error", message);
@@ -39,7 +39,7 @@ async function requestJson(url, options, buttonId) {
   try {
     const res = await fetch(url, options);
     const data = await res.json();
-    setOutput(data);
+    if (!preserveOutput) setOutput(data);
     if (!res.ok) {
       const detail = data && data.detail ? data.detail : "Request failed";
       showToast("error", "Failed: " + detail);
@@ -70,8 +70,16 @@ function updateWalletBadge(tokens) {
 }
 
 async function getWallet() {
-  const data = await requestJson("/api/wallet", { headers: headers(false) }, "btnWallet");
+  const data = await requestJson("/api/wallet", { headers: headers(false) }, "btnWallet", false);
   if (typeof data.tokens_remaining === "number") updateWalletBadge(data.tokens_remaining);
+}
+
+async function refreshWalletBadgeOnly() {
+  const res = await fetch("/api/wallet", { headers: headers(false) });
+  const data = await res.json();
+  if (res.ok && typeof data.tokens_remaining === "number") {
+    updateWalletBadge(data.tokens_remaining);
+  }
 }
 
 async function getLastTransaction() {
@@ -93,9 +101,10 @@ async function uploadDoc() {
   await requestJson(
     "/api/documents/upload",
     { method: "POST", headers: headers(false), body: form },
-    "btnUpload"
+    "btnUpload",
+    false
   );
-  await getWallet();
+  await refreshWalletBadgeOnly();
 }
 
 async function askAgent() {
@@ -113,9 +122,10 @@ async function askAgent() {
       headers: headers(true),
       body: JSON.stringify(payload),
     },
-    "btnAsk"
+    "btnAsk",
+    false
   );
-  await getWallet();
+  await refreshWalletBadgeOnly();
 }
 
 window.getWallet = getWallet;
